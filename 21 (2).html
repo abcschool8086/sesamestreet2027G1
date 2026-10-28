@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>【台南小一新手村】21週勇者大冒險 (2027年度)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Zen+Maru+Gothic:wght@700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #fef3c7 100%);
+            touch-action: manipulation;
+        }
+        .font-game { font-family: 'Zen Maru Gothic', 'Noto Sans TC', sans-serif; }
+        .scratch-canvas {
+            touch-action: none;
+            cursor: pointer;
+        }
+        .animate-pop { animation: pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes pop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .pulse-btn { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+
+        /* Custom Diamond Pattern for Lucky Scratch Card */
+        .bg-diamond-pattern {
+            background-color: #3b82f6;
+            background-image: 
+                linear-gradient(135deg, #60a5fa 25%, transparent 25%), 
+                linear-gradient(225deg, #60a5fa 25%, transparent 25%), 
+                linear-gradient(45deg, #60a5fa 25%, transparent 25%), 
+                linear-gradient(315deg, #60a5fa 25%, transparent 25%);
+            background-position: 15px 0, 15px 0, 0 0, 0 0;
+            background-size: 30px 30px;
+            background-repeat: repeat;
+        }
+
+        .lucky-text-stroke {
+            text-shadow: 
+                -2px -2px 0 #4c1d95, 
+                 2px -2px 0 #4c1d95, 
+                -2px  2px 0 #4c1d95, 
+                 2px  2px 0 #4c1d95,
+                 0px  4px 8px rgba(0,0,0,0.4);
+        }
+
+        /* Matching Line Game Canvas */
+        .matching-item {
+            user-select: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .matching-item.selected {
+            border-color: #f59e0b;
+            background-color: #fef3c7;
+            transform: scale(1.03);
+        }
+        .matching-item.matched {
+            border-color: #10b981;
+            background-color: #d1fae5;
+            cursor: default;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 pb-12 flex flex-col justify-between">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur-md shadow-sm border-b border-sky-100">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-400 via-orange-500 to-rose-500 flex items-center justify-center text-white shadow-md text-xl">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </div>
+                <div>
+                    <h1 class="font-game font-black text-lg sm:text-xl text-sky-950 leading-tight">台南小一新手村</h1>
+                    <p class="text-[11px] text-sky-600 font-bold">21週勇者大冒險 ‧ 2027升小一銜接</p>
+                </div>
+            </div>
+
+            <!-- Header Action Controls -->
+            <div class="flex items-center gap-2">
+                <button onclick="toggleAdminView()" class="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 transition border border-slate-200">
+                    <i class="fa-solid fa-sliders text-sky-600"></i>
+                    <span class="hidden sm:inline">12分校後台</span>
+                </button>
+                <div id="user-header-status" class="hidden flex items-center gap-1 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200">
+                    <i class="fa-solid fa-trophy text-amber-500 text-xs"></i>
+                    <span class="text-xs font-bold text-amber-900"><span id="header-completed-count">0</span>/21 週</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Weekly Countdown Banner -->
+        <div id="timer-banner" class="hidden bg-gradient-to-r from-sky-600 to-indigo-700 text-white text-xs px-4 py-1.5 text-center font-medium flex items-center justify-center gap-2">
+            <span><i class="fa-regular fa-clock text-amber-300 mr-1"></i>當週任務結算倒數 (週日 23:59 前)：</span>
+            <span id="weekly-countdown" class="font-mono font-bold text-amber-300 bg-black/20 px-2 py-0.5 rounded">00天 00:00:00</span>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-4xl mx-auto px-4 pt-6 space-y-6 w-full flex-grow">
+
+        <!-- ========================================== -->
+        <!-- VIEW 1: REGISTRATION FORM                  -->
+        <!-- ========================================== -->
+        <section id="registration-view" class="bg-white rounded-3xl p-6 sm:p-8 shadow-xl border border-sky-100 space-y-6 animate-pop">
+            <div class="text-center space-y-2">
+                <div class="inline-flex items-center gap-2 bg-amber-100 text-amber-800 font-bold text-xs px-3 py-1 rounded-full">
+                    <i class="fa-solid fa-star"></i> 2027/01/01 - 2027/08/31 升小一專屬
+                </div>
+                <h2 class="font-game text-2xl sm:text-3xl font-black text-slate-900">
+                    填寫新生報名表 ‧ 開啟 21 週大冒險
+                </h2>
+                <p class="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto">
+                    請家長先填寫基本資料，完成「第 0 週實體體驗課」即可開啟每週關卡！每週 5 題完成即可刮卡抽獎！
+                </p>
+            </div>
+
+            <form onsubmit="handleRegistration(event)" class="space-y-4 max-w-md mx-auto">
+                <div class="space-y-1">
+                    <label class="block font-bold text-xs text-slate-700">家長姓名 <span class="text-rose-500">*</span></label>
+                    <input type="text" id="reg-parent-name" required placeholder="例如：林大明" class="w-full p-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-sky-400 outline-none text-sm font-medium">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block font-bold text-xs text-slate-700">聯絡電話 <span class="text-rose-500">*</span></label>
+                    <input type="tel" id="reg-parent-phone" required placeholder="例如：0912345678" class="w-full p-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-sky-400 outline-none text-sm font-medium">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block font-bold text-xs text-slate-700">小朋友姓名 <span class="text-rose-500">*</span></label>
+                    <input type="text" id="reg-child-name" required placeholder="例如：林小寶" class="w-full p-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-sky-400 outline-none text-sm font-medium">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block font-bold text-xs text-slate-700">未來預計就讀國小 (台南市) <span class="text-rose-500">*</span></label>
+                    <input type="text" id="reg-school" required placeholder="例如：勝利國小 / 億載國小 / 崇明國小" class="w-full p-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-sky-400 outline-none text-sm font-medium">
+                </div>
+
+                <div class="space-y-1">
+                    <label class="block font-bold text-xs text-slate-700">選擇主要聯繫 / 方便造訪分校 <span class="text-rose-500">*</span></label>
+                    <select id="reg-branch" required class="w-full p-3 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-sky-400 outline-none text-sm font-bold text-slate-800">
+                        <option value="">-- 請選擇台南 12 所分校之一 --</option>
+                        <option value="凱仕蘭分校">東區 - 凱仕蘭分校</option>
+                        <option value="崇學分校">東區 - 崇學分校</option>
+                        <option value="東寧分校">東區 - 東寧分校</option>
+                        <option value="安平區艾蒙利校">安平區 - 艾蒙利校</option>
+                        <option value="永康區永康校">永康區 - 永康校</option>
+                        <option value="南區南區校">南區 - 南區校</option>
+                        <option value="北區北區校">北區 - 北區校</option>
+                        <option value="中西區民權校">中西區 - 民權校</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-400 via-orange-500 to-rose-500 text-white font-black text-base shadow-lg hover:brightness-105 transition pulse-btn">
+                    <i class="fa-solid fa-paper-plane mr-2"></i>開啟勇者冒險任務
+                </button>
+            </form>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- VIEW 2: MAP & ADVENTURE DASHBOARD          -->
+        <!-- ========================================== -->
+        <section id="adventure-view" class="hidden space-y-6">
+
+            <!-- Student Profile Summary -->
+            <div class="bg-gradient-to-r from-sky-600 via-indigo-600 to-purple-600 rounded-3xl p-6 text-white shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span id="user-display-branch" class="bg-white/20 backdrop-blur-md px-3 py-0.5 rounded-full text-xs font-bold">東區東門校</span>
+                        <span class="text-xs text-sky-200">2027 小一新鮮人</span>
+                    </div>
+                    <h2 class="font-game text-xl sm:text-2xl font-black">
+                        勇者：<span id="user-display-child" class="text-amber-300">--</span> 小朋友
+                    </h2>
+                    <p class="text-xs text-sky-100">
+                        家長：<span id="user-display-parent">--</span> (<span id="user-display-phone">--</span>) ‧ 目標國小：<span id="user-display-school">--</span>
+                    </p>
+                </div>
+
+                <!-- Progress Counter Box -->
+                <div class="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl border border-white/20 flex items-center gap-4 text-center">
+                    <div>
+                        <p class="text-[10px] text-sky-200 font-bold">實體免費美語</p>
+                        <p id="week0-status-badge" class="font-black text-amber-300 text-xs">未領取</p>
+                    </div>
+                    <div class="w-px h-8 bg-white/20"></div>
+                    <div>
+                        <p class="text-[10px] text-sky-200 font-bold">已通關進度</p>
+                        <p id="completed-progress-num" class="font-black text-emerald-300 text-lg">0 / 21</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Special Week 0 Card -->
+            <div id="week0-card" class="bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 rounded-3xl p-5 text-white shadow-lg space-y-3 relative overflow-hidden">
+                <div class="flex items-center justify-between">
+                    <span class="bg-black/20 backdrop-blur-md text-white font-extrabold text-xs px-3 py-1 rounded-full">
+                        <i class="fa-solid fa-star text-yellow-200 mr-1"></i> 第 0 週 (特別贈品)
+                    </span>
+                    <span id="week0-tag" class="bg-white text-orange-600 font-black text-xs px-3 py-1 rounded-full shadow">
+                        可預約體驗
+                    </span>
+                </div>
+                <div>
+                    <h3 class="font-game text-lg font-black">實體免費美語體驗課 1 次</h3>
+                    <p class="text-xs text-amber-50">至選定台南 12 所分校享用專業師資獨家體驗，不計入 21 週主題任務中！</p>
+                </div>
+                <button id="week0-btn" onclick="openWeek0Modal()" class="w-full py-2.5 rounded-xl bg-white text-orange-600 font-black text-xs shadow hover:bg-amber-50 transition">
+                    立即查看分校時間地點與預約體驗 ➔
+                </button>
+            </div>
+
+            <!-- 21 Weeks Map Grid -->
+            <div class="space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-game text-xl font-black text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-map text-amber-500"></i> 21 週主題闖關地圖
+                    </h3>
+                    <span class="text-xs text-slate-500 font-medium">每週完成 5 題方可刮卡</span>
+                </div>
+
+                <div id="weeks-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <!-- Dynamic rendering of 21 weeks -->
+                </div>
+            </div>
+
+            <!-- Grand Prize Final Section -->
+            <div id="grand-prize-card" class="bg-slate-900 text-white rounded-3xl p-6 shadow-2xl border-2 border-amber-400 space-y-4 text-center">
+                <div class="w-12 h-12 rounded-full bg-amber-400 text-amber-950 flex items-center justify-center mx-auto text-2xl font-black shadow-lg">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                <div class="space-y-1">
+                    <h3 class="font-game text-xl font-black text-amber-300">21 週 + 實體美語體驗 全通關大抽獎</h3>
+                    <p class="text-xs text-slate-300 max-w-md mx-auto">
+                        必須完成「實體免費美語體驗課」加上「全 21 週每週 5 題挑戰」，即可開啟終極大獎抽獎資格！
+                    </p>
+                </div>
+                <button id="grand-prize-btn" onclick="claimGrandPrize()" disabled class="w-full max-w-sm mx-auto py-3 rounded-2xl bg-slate-700 text-slate-400 font-bold text-sm transition">
+                    尚未完成全部關卡
+                </button>
+            </div>
+
+            <!-- Footer Prize Rules & Disclaimer Notice -->
+            <footer class="bg-white/80 rounded-2xl p-5 border border-sky-100 space-y-3 text-xs text-slate-600 shadow-sm">
+                <h4 class="font-bold text-slate-900 flex items-center gap-1.5 border-b pb-2">
+                    <i class="fa-solid fa-circle-info text-sky-600"></i> 活動規則與每週獎品說明
+                </h4>
+                <ul class="list-disc list-inside space-y-1 text-[11px] leading-relaxed text-slate-500">
+                    <li><b>每週獎品不公開：</b>每週禮物將統一於刮開刮刮卡後顯示。獎品包含小一鉛筆盒套組、迪士尼文具、小一專用護脊書包等精美好禮！</li>
+                    <li><b>刮刮卡機率中獎：</b>每週完成 5 題獲得 1 次刮卡機會。獎品並非人人有獎（預設每 80 人中獎 1 人），獲獎者可憑畫面至指定分校領取。</li>
+                    <li><b>免費美語體驗：</b>第 0 週贈送之 1 次實體免費美語體驗課不計入 21 週關卡內，但為全通關抽大獎之必要條件。</li>
+                </ul>
+            </footer>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- VIEW 3: SIMULATED ADMIN BACKEND            -->
+        <!-- ========================================== -->
+        <section id="admin-view" class="hidden bg-white rounded-3xl p-6 shadow-xl space-y-5 border border-slate-200 animate-pop">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
+                <div>
+                    <h2 class="font-game text-xl font-black text-slate-900 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-sky-600"></i> 台南 12 分校 - 管理後台
+                    </h2>
+                    <p class="text-xs text-slate-500">設定當週刮刮卡獎品、中獎機率與查看報名記錄</p>
+                </div>
+                <button onclick="toggleAdminView()" class="px-3 py-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs self-start sm:self-auto">
+                    返回冒險主頁
+                </button>
+            </div>
+
+            <!-- Settings Panel -->
+            <div class="bg-sky-50 p-4 rounded-2xl border border-sky-200 space-y-3 text-xs">
+                <p class="font-bold text-sky-900 flex items-center gap-1.5 border-b border-sky-200 pb-2">
+                    <i class="fa-solid fa-gear text-sky-600"></i> 全局刮刮卡與參數設定
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">本週刮刮卡中獎禮物名稱</label>
+                        <input type="text" id="admin-prize-input" value="精美小一鉛筆盒套組" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">刮刮卡中獎機率 (每 N 人得獎 1 人)</label>
+                        <select id="admin-prob-select" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-bold text-slate-800">
+                            <option value="80">1 / 80 (約 1.25% 機率中獎)</option>
+                            <option value="50">1 / 50 (約 2.00% 機率中獎)</option>
+                            <option value="100">1 / 100 (約 1.00% 機率中獎)</option>
+                            <option value="1">1 / 1 (測試模式：100% 必定中獎)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Branch Passcode Management -->
+                <div class="pt-2 border-t border-sky-200 space-y-2">
+                    <p class="font-bold text-sky-900 flex items-center gap-1.5">
+                        <i class="fa-solid fa-key text-amber-500"></i> 台南 12 分校體驗驗證碼設定
+                    </p>
+                    <div id="admin-passcode-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <!-- Dynamic Branch Passcode Inputs -->
+                    </div>
+                </div>
+
+                <button onclick="saveAdminSettings()" class="px-4 py-2 rounded-xl bg-sky-600 text-white font-bold hover:bg-sky-700 transition shadow">
+                    儲存後台設定
+                </button>
+            </div>
+
+            <!-- Demo Fast-Forward Controls -->
+            <div class="bg-amber-50 border border-amber-200 p-3.5 rounded-2xl text-xs space-y-2">
+                <p class="font-bold text-amber-900 flex items-center gap-1">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-600"></i> 展示與測試快進工具
+                </p>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="adminUnlockNextWeek()" class="px-3 py-1.5 rounded-lg bg-amber-500 text-white font-bold hover:bg-amber-600">
+                        ⚡ 快進：解鎖下一週
+                    </button>
+                    <button onclick="adminUnlockAllWeeks()" class="px-3 py-1.5 rounded-lg bg-purple-600 text-white font-bold hover:bg-purple-700">
+                        🚀 快進：全 21 週 + 體驗課完成
+                    </button>
+                    <button onclick="adminResetData()" class="px-3 py-1.5 rounded-lg bg-rose-500 text-white font-bold hover:bg-rose-600">
+                        🗑️ 重置測試資料
+                    </button>
+                </div>
+            </div>
+
+            <!-- Admin Table -->
+            <div class="space-y-3">
+                <div class="flex flex-col sm:flex-row gap-2 justify-between">
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <input type="text" id="admin-search" oninput="renderAdminTable()" placeholder="搜尋家長或電話..." class="p-2 rounded-xl border border-slate-200 text-xs w-full sm:w-48">
+                        <select id="admin-branch-filter" onchange="renderAdminTable()" class="p-2 rounded-xl border border-slate-200 text-xs font-bold">
+                            <option value="ALL">全 12 分校</option>
+                            <option value="凱仕蘭分校">凱仕蘭分校</option>
+                            <option value="崇學分校">崇學分校</option>
+                            <option value="東寧分校">東寧分校</option>
+                            <option value="安平區艾蒙利校">安平區艾蒙利校</option>
+                            <option value="永康區永康校">永康區永康校</option>
+                            <option value="南區南區校">南區南區校</option>
+                            <option value="北區北區校">北區北區校</option>
+                            <option value="中西區民權校">中西區民權校</option>
+                        </select>
+                    </div>
+                    <button onclick="exportToCSV()" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700">
+                        <i class="fa-solid fa-file-excel mr-1"></i> 導出 CSV
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                    <table class="w-full text-left text-xs text-slate-600">
+                        <thead class="bg-slate-50 text-slate-800 font-bold border-b">
+                            <tr>
+                                <th class="p-3">學生/家長</th>
+                                <th class="p-3">電話</th>
+                                <th class="p-3">國小/分校</th>
+                                <th class="p-3">美語體驗</th>
+                                <th class="p-3">21週進度</th>
+                                <th class="p-3">刮刮卡中獎</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-table-body" class="divide-y divide-slate-100">
+                            <!-- Dynamic Rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ========================================== -->
+    <!-- MODAL 0: WEEK 0 BRANCH & VERIFICATION POPUP -->
+    <!-- ========================================== -->
+    <div id="week0-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 relative animate-pop max-h-[90vh] overflow-y-auto">
+            <!-- Header -->
+            <div class="flex items-center justify-between border-b pb-3 border-slate-100">
+                <div class="flex items-center gap-2">
+                    <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-black text-xs">第 0 週</span>
+                    <h4 class="font-bold text-slate-900 text-base">實體美語體驗課預約與現場驗證</h4>
+                </div>
+                <button onclick="closeWeek0Modal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Branch Selection Dropdown -->
+            <div class="space-y-1">
+                <label class="block font-bold text-xs text-slate-700">選擇體驗分校：</label>
+                <select id="w0-branch-select" onchange="updateWeek0BranchDisplay()" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-amber-400 outline-none">
+                    <option value="凱仕蘭分校">東區 - 凱仕蘭分校</option>
+                    <option value="崇學分校">東區 - 崇學分校</option>
+                    <option value="東寧分校">東區 - 東寧分校</option>
+                    <option value="安平區艾蒙利校">安平區 - 艾蒙利校</option>
+                    <option value="永康區永康校">永康區 - 永康校</option>
+                    <option value="南區南區校">南區 - 南區校</option>
+                    <option value="北區北區校">北區 - 北區校</option>
+                    <option value="中西區民權校">中西區 - 民權校</option>
+                </select>
+            </div>
+
+            <!-- Selected Branch Details Display -->
+            <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-2">
+                <div class="flex items-center justify-between border-b border-amber-200/60 pb-1.5">
+                    <span id="w0-selected-branch-title" class="font-black text-amber-900 text-sm">--</span>
+                    <span class="text-[10px] font-bold text-amber-800 bg-amber-200/80 px-2.5 py-0.5 rounded-full">免費體驗地點與時間資訊</span>
+                </div>
+                <div class="text-xs text-amber-950 space-y-1">
+                    <p><i class="fa-solid fa-location-dot text-rose-500 mr-1.5"></i><b>地址：</b><span id="w0-branch-address">--</span></p>
+                    <p><i class="fa-regular fa-clock text-amber-600 mr-1.5"></i><b>開放體驗時段：</b><span id="w0-branch-time">--</span></p>
+                    <p><i class="fa-solid fa-phone text-sky-600 mr-1.5"></i><b>諮詢專線：</b><span id="w0-branch-phone">--</span></p>
+                </div>
+            </div>
+
+            <!-- SECTION A: RESERVATION FORM (Shown when NOT reserved yet) -->
+            <div id="w0-reservation-box" class="bg-sky-50 border border-sky-200 rounded-2xl p-4 space-y-3">
+                <h5 class="font-bold text-xs text-sky-900 flex items-center gap-1.5">
+                    <i class="fa-regular fa-calendar-check text-sky-600"></i> 第一步：立即線上填寫確定參加體驗課
+                </h5>
+                <div class="space-y-2 text-xs">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">選擇希望體驗時段 <span class="text-rose-500">*</span></label>
+                        <select id="w0-booking-slot" class="w-full p-2.5 rounded-xl border border-slate-200 font-bold text-slate-800 bg-white">
+                            <!-- Dynamic Options -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">備註 / 特別需求的說明 (選填)</label>
+                        <input type="text" id="w0-booking-note" placeholder="例如：孩子對美語很有興趣 / 希望了解小一銜接" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs bg-white outline-none focus:ring-2 focus:ring-sky-400">
+                    </div>
+                    <button onclick="submitWeek0Booking()" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-xs rounded-xl shadow hover:brightness-105 transition pulse-btn">
+                        <i class="fa-solid fa-check mr-1"></i>確定預約體驗課
+                    </button>
+                </div>
+            </div>
+
+            <!-- SECTION B: BRANCH CODE VERIFICATION (Shown AFTER reservation) -->
+            <div id="w0-verification-box" class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+                <div class="space-y-0.5">
+                    <div class="flex items-center justify-between">
+                        <h5 class="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                            <i class="fa-solid fa-key text-amber-500"></i> 第二步：體驗完成 ‧ 輸入分校專屬驗證碼
+                        </h5>
+                        <span id="w0-booking-status-badge" class="bg-sky-100 text-sky-800 text-[10px] font-bold px-2 py-0.5 rounded-full">已預約</span>
+                    </div>
+                    <p class="text-[11px] text-slate-500">
+                        親愛的家長，體驗課完成後，請由現場分校主任或老師輸入該分校專屬驗證碼，即可解鎖刮刮卡抽獎！
+                    </p>
+                </div>
+
+                <div class="flex gap-2">
+                    <input type="text" id="w0-passcode-input" placeholder="請現場老師輸入分校驗證碼" class="p-2.5 rounded-xl border border-slate-300 text-xs font-mono font-bold w-full outline-none focus:ring-2 focus:ring-amber-400">
+                    <button onclick="verifyWeek0Code()" class="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs font-bold rounded-xl shadow shrink-0 hover:brightness-105 transition">
+                        驗證並刮開禮物
+                    </button>
+                </div>
+                <p id="w0-verify-error" class="text-[11px] font-bold text-rose-500 hidden">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i>驗證碼不正確！請洽該分校現場主任或老師。
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL 1: WEEKLY 5-QUESTION QUIZ POPUP      -->
+    <!-- ========================================== -->
+    <div id="quiz-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative animate-pop overflow-hidden">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b pb-3 border-slate-100">
+                <div>
+                    <span id="quiz-modal-week-tag" class="px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-800 font-black text-xs">第 1 週</span>
+                    <h4 id="quiz-modal-title" class="font-bold text-slate-900 text-base">ㄅㄆㄇ 注音大挑戰</h4>
+                </div>
+                <button onclick="closeQuizModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Progress Bar inside Modal -->
+            <div class="space-y-1">
+                <div class="flex justify-between text-xs font-bold text-slate-500">
+                    <span>答題進度</span>
+                    <span id="quiz-progress-text" class="text-sky-600">第 1 / 5 題</span>
+                </div>
+                <div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div id="quiz-progress-bar" class="h-full bg-sky-500 transition-all duration-300 w-1/5"></div>
+                </div>
+            </div>
+
+            <!-- Question Content Box -->
+            <div id="quiz-content-area" class="space-y-4">
+                <div class="bg-sky-50 p-4 rounded-2xl border border-sky-100 space-y-1">
+                    <p id="quiz-question-text" class="font-bold text-slate-800 text-sm sm:text-base leading-relaxed">
+                        題目載入中...
+                    </p>
+                </div>
+
+                <!-- Multiple Choice Container -->
+                <div id="quiz-options-container" class="space-y-2">
+                    <!-- Option Buttons Injected Dynamically -->
+                </div>
+
+        <!-- SECTION: SIMULATED ADMIN BACKEND UPDATES -->
+                <!-- Branch Passcode & Time Settings in Admin -->
+                <div class="pt-2 border-t border-sky-200 space-y-2">
+                    <p class="font-bold text-sky-900 flex items-center justify-between">
+                        <span class="flex items-center gap-1.5"><i class="fa-solid fa-key text-amber-500"></i> 台南 12 分校體驗驗證碼與時段管理</span>
+                        <span class="text-[10px] text-sky-600">可於此修改各分校驗證碼與體驗課資訊</span>
+                    </p>
+                    <div id="admin-passcode-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto p-2 bg-white rounded-xl border border-sky-100">
+                        <!-- Dynamic Branch Code & Schedule Settings Inputs -->
+                    </div>
+                </div>
+
+                <div id="quiz-feedback" class="hidden p-3.5 rounded-2xl text-xs space-y-2">
+                    <div id="quiz-feedback-title" class="font-bold text-sm flex items-center gap-1.5"></div>
+                    <p id="quiz-feedback-text" class="text-slate-600 leading-relaxed"></p>
+                    <button id="quiz-next-btn" onclick="nextQuizQuestion()" class="w-full mt-1 py-2.5 rounded-xl font-bold text-white bg-sky-600 hover:bg-sky-700 transition shadow">
+                        下一題 ➔
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL 3: ADMIN LOGIN MODAL                 -->
+    <!-- ========================================== -->
+    <div id="admin-login-modal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 relative animate-pop">
+            <div class="flex items-center justify-between border-b pb-3 border-slate-100">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <h4 class="font-bold text-slate-900 text-base">分校後台權限驗證</h4>
+                </div>
+                <button onclick="closeAdminLoginModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleAdminLogin(event)" class="space-y-3">
+                <div class="space-y-1">
+                    <label class="block font-bold text-xs text-slate-700">管理帳號</label>
+                    <input type="text" id="admin-login-user" required placeholder="請輸入帳號 (預設: admin)" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-sky-400">
+                </div>
+                <div class="space-y-1">
+                    <label class="block font-bold text-slate-700 text-xs">管理密碼</label>
+                    <input type="password" id="admin-login-pass" required placeholder="請輸入密碼 (預設: 2027)" class="w-full p-2.5 rounded-xl border border-slate-200 text-xs font-mono font-bold text-slate-800 outline-none focus:ring-2 focus:ring-sky-400">
+                </div>
+
+                <p id="admin-login-error" class="text-[11px] font-bold text-rose-500 hidden">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i>帳號或密碼錯誤！
+                </p>
+
+                <button type="submit" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl shadow transition">
+                    登入管理後台
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- JavaScript Data Engine & Logic -->
+    <script>
+        // =========================================================
+        // 12 BRANCHES DATA & DEFAULT PASSCODES
+        // =========================================================
+        const BRANCH_DATA = {
+            "凱仕蘭分校": { address: "台南市東區東門路二段158巷20號", time: "每週三 16:30-17:30 / 每週六 10:00-11:00", phone: "(06) 267-1122", slots: ["每週三 16:30-17:30", "每週六 10:00-11:00"] },
+            "崇學分校": { address: "台南市東區崇學路102號", time: "每週二 17:00-18:00 / 每週六 10:30-11:30", phone: "(06) 268-3344", slots: ["每週二 17:00-18:00", "每週六 10:30-11:30"] },
+            "東寧分校": { address: "台南市東區東寧路201號", time: "每週四 16:30-17:30 / 每週六 14:00-15:00", phone: "(06) 235-5566", slots: ["每週四 16:30-17:30", "每週六 14:00-15:00"] },
+            "安平區艾蒙利校": { address: "台南市安平區平通路350號", time: "每週三 17:00-18:00 / 每週六 10:00-11:00", phone: "(06) 299-7788", slots: ["每週三 17:00-18:00", "每週六 10:00-11:00"] },
+            "永康區永康校": { address: "台南市永康區中山南路180號", time: "每週一 17:00-18:00 / 每週五 17:00-18:00", phone: "(06) 201-9900", slots: ["每週一 17:00-18:00", "每週五 17:00-18:00"] },
+            "南區南區校": { address: "台南市南區金華路二段85號", time: "每週三 16:30-17:30 / 每週六 13:30-14:30", phone: "(06) 263-1133", slots: ["每週三 16:30-17:30", "每週六 13:30-14:30"] },
+            "北區北區校": { address: "台南市北區西門路三段120號", time: "每週二 16:30-17:30 / 每週六 10:00-11:00", phone: "(06) 222-4455", slots: ["每週二 16:30-17:30", "每週六 10:00-11:00"] },
+            "中西區民權校": { address: "台南市中西區民權路二段60號", time: "每週四 17:00-18:00 / 每週六 15:00-16:00", phone: "(06) 221-6677", slots: ["每週四 17:00-18:00", "每週六 15:00-16:00"] }
+        };
+
+        const DEFAULT_PASSCODES = {
+            "凱仕蘭分校": "2027",
+            "崇學分校": "2027",
+            "東寧分校": "2027",
+            "安平區艾蒙利校": "2027",
+            "永康區永康校": "2027",
+            "南區南區校": "2027",
+            "北區北區校": "2027",
+            "中西區民權校": "2027"
+        };
+
+        // 21 WEEKS QUESTIONS DATA GENERATOR (UPDATED WITH MATCHING GAME & TONES/COMBINED RHYMES)
+        const WEEKS_DATA = Array.from({ length: 21 }, (_, i) => {
+            const weekNum = i + 1;
+            const titles = [
+                "ㄅㄆㄇ 聲調與結合韻連連看大挑戰", "生活自理與物品收納", "基礎英文 Phonics 字母拼讀",
+                "上學作息與時間管理", "10 以內加減法與數感", "課堂禮貌與專注力訓練",
+                "生活英語常用會話", "認識校園設施與安全", "ㄅㄆㄇ 結合韻連連看體驗",
+                "圖形認知與空間思維", "社交情緒管理與交朋友", "常用英文單字與聽力",
+                "邏輯思考與規律推理", "閱讀理解與圖文對照", "注音符號綜合測驗",
+                "生活數學應用與看鐘錶", "小一生活常識綜合會話", "日常生活英文聽說互動",
+                "專注力與觀察能力挑戰", "小一入學綜合前測驗", "勇者總結業綜合評量"
+            ];
+
+            let questions = [];
+
+            // Week 1 Special: ALL 5 QUESTIONS ARE MATCHING GAMES (第 1 週全 5 題連連看)
+            if (weekNum === 1) {
+                questions = [
+                    { 
+                        type: "matching", 
+                        q: "【第 1 週 Q1 勇者連連看】請將左邊的日常詞語與右邊正確的注音聲調配對！", 
+                        pairs: [
+                            { left: "🍎 蘋果", right: "ㄆㄧㄥˊ ㄍㄨㄛˇ (二聲/三聲)", key: "1" },
+                            { left: "🐘 大象", right: "ㄒㄧㄤˋ (四聲結合韻)", key: "2" },
+                            { left: "🐱 貓咪", right: "ㄇㄠ ㄇㄧ (一聲)", key: "3" }
+                        ], 
+                        detail: "太棒了！精準將蘋果、大象與貓咪的注音聲調與結合韻連對囉！" 
+                    },
+                    { 
+                        type: "matching", 
+                        q: "【第 1 週 Q2 結合韻連連看】請將左邊的圖文水果與右邊正確的結合韻連起來！", 
+                        pairs: [
+                            { left: "🍉 西瓜", right: "ㄍㄨㄚ (ㄨㄚ 結合韻)", key: "1" },
+                            { left: "🍌 香蕉", right: "ㄒㄧㄤ (ㄧㄤ 結合韻)", key: "2" },
+                            { left: "🍓 莓果", right: "ㄇㄟˊ (ㄟ 韻母)", key: "3" }
+                        ], 
+                        detail: "讚喔！西瓜(ㄨㄚ)、香蕉(ㄧㄤ)的結合韻都連對了！" 
+                    },
+                    { 
+                        type: "matching", 
+                        q: "【第 1 週 Q3 聲調辨識連連看】請將動物與牠們名稱的聲調連起來！", 
+                        pairs: [
+                            { left: "🐧 企鵝", right: "ㄑㄧˋ (四聲)", key: "1" },
+                            { left: "🐸 青蛙", right: "ㄑㄧㄥ (一聲)", key: "2" },
+                            { left: "🐬 海豚", right: "ㄊㄨㄣˊ (二聲)", key: "3" }
+                        ], 
+                        detail: "太厲害了！完全掌握四聲、一聲與二聲的分辨！" 
+                    },
+                    { 
+                        type: "matching", 
+                        q: "【第 1 週 Q4 介音與韻母連連看】請將拼音組合與正確的讀音連線！", 
+                        pairs: [
+                            { left: "ㄧ + ㄠ (介音 ㄧ)", right: "ㄧㄠ (腰)", key: "1" },
+                            { left: "ㄨ + ㄞ (介音 ㄨ)", right: "ㄨㄞ (歪)", key: "2" },
+                            { left: "ㄩ + ㄝ (介音 ㄩ)", right: "ㄩㄝ (月)", key: "3" }
+                        ], 
+                        detail: "掌握了介音(ㄧ、ㄨ、ㄩ)的結合韻，拼音會變得超級快！" 
+                    },
+                    { 
+                        type: "matching", 
+                        q: "【第 1 週 Q5 小一課堂常務連連看】請將課堂情境與勇者正確應對方式連線！", 
+                        pairs: [
+                            { left: "📢 老師說「請安靜」", right: "👀 立刻停止說話並看著老師", key: "1" },
+                            { left: "🙋 想回答問題時", right: "✋ 舉手等老師點名再發言", key: "2" },
+                            { left: "🔔 下課鐘聲響起", right: "🎒 先收好桌上書本再下樓", key: "3" }
+                        ], 
+                        detail: "太優秀了！你已經是一位合格且懂禮貌的小一勇者囉！" 
+                    }
+                ];
+            } 
+            // Week 9 Special: Combined Rhymes Matching Game
+            else if (weekNum === 9) {
+                questions = [
+                    { type: "choice", q: "【第 9 週 Q1】請問「月亮」的「月」注音結合韻拼音是哪一個？", options: ["ㄩㄝˋ", "ㄧㄝˋ", "ㄨㄚˋ", "ㄨㄛˋ"], ans: 0, detail: "「月」是 ㄩㄝˋ，由介音 ㄩ 和 ㄝ 結合而成！" },
+                    { type: "matching", q: "【第 9 週 Q2 結合韻連連看】請將物品名稱與正確的結合韻連線！", 
+                      pairs: [
+                        { left: "西瓜", right: "ㄒㄧ ㄍㄨㄚ (ㄨㄚ 結合韻)", key: "1" },
+                        { left: "花朵", right: "ㄏㄨㄚ ㄉㄨㄛˇ (ㄨㄛ 結合韻)", key: "2" },
+                        { left: "音樂", right: "ㄧㄣ ㄩㄝˋ (ㄩㄝ 結合韻)", key: "3" }
+                      ], 
+                      detail: "太讚了！順利完成結合韻對應！" 
+                    },
+                    { type: "choice", q: "【第 9 週 Q3】「媽媽」後面的「媽」讀作輕聲，注音符號上面會有什麼標記？", options: ["沒有標記", "一個小圓點 (˙)", "撇向右上 (ˊ)", "勾起來 (ˇ)"], ans: 1, detail: "輕聲會在注音符號上方或前方標示一個小圓點「˙」！" },
+                    { type: "choice", q: "【第 9 週 Q4】「𡚁 (ㄅㄧ constraint)」這個字的「ㄧㄢ」結合韻發音是什麼？", options: ["煙 (ㄧㄢ)", "蛙 (ㄨㄚ)", "威 (ㄨㄟ)", "約 (ㄩㄝ)"], ans: 0, detail: "ㄧ + ㄢ 讀作 ㄧㄢ！" },
+                    { type: "choice", q: "【第 9 週 Q5】遇到注音拼音不會讀時，可以怎麼做？", options: ["直接放棄", "問老師或家長並多練習切音", "隨便亂讀", "蓋上書本"], ans: 1, detail: "主動發問切音是進步最快的方法！" }
+                ];
+            } else {
+                questions = [
+                    { type: "choice", q: `【第 ${weekNum} 週 Q1】進入小一課堂，當老師說「請安靜」時，勇者應該怎麼做？`, options: ["馬上舉手發言", "立刻停止說話並看著老師", "和旁邊同學聊聊天", "收拾書包回家"], ans: 1, detail: "課堂專注是小一學習的第一步！" },
+                    { type: "choice", q: `【第 ${weekNum} 週 Q2】請問注音符號「ㄅ」發音與下列哪個圖片名稱開頭相同？`, options: ["包子 (ㄅㄠ)", "貓咪 (ㄇㄠ)", "太陽 (ㄊㄞ)", "西瓜 (ㄒㄧ)"], ans: 0, detail: "「ㄅ」是包子的ㄅ！" },
+                    { type: "choice", q: `【第 ${weekNum} 週 Q3】小寶有 3 枝鉛筆，媽媽又送他 2 枝，請問他現在共有幾枝鉛筆？`, options: ["4 枝", "5 枝", "6 枝", "7 枝"], ans: 1, detail: "3 + 2 = 5 枝鉛筆。" },
+                    { type: "choice", q: `【第 ${weekNum} 週 Q4】英文單字 "Cat" 的第一個字母開頭發音是什麼？`, options: ["/b/", "/c/ (k)", "/d/", "/a/"], ans: 1, detail: "C is for Cat /k/ /k/ Cat!" },
+                    { type: "choice", q: `【第 ${weekNum} 週 Q5】晚上上床睡覺的最佳時間，大約是幾點比較合適？`, options: ["凌晨 12 點", "晚上 9 點左右", "下午 5 點", "早上 6 點"], ans: 1, detail: "早睡早起身體好，才有充沛精神上學！" }
+                ];
+            }
+
+            return {
+                week: weekNum,
+                title: titles[i % titles.length],
+                questions: questions
+            };
+        });
+
+        // Keys & State
+        const STORAGE_USER = 'tainan_2027_user_v2';
+        const STORAGE_PROGRESS = 'tainan_2027_prog_v2';
+        const STORAGE_ADMIN = 'tainan_2027_admin_v2';
+
+        let currentUser = JSON.parse(localStorage.getItem(STORAGE_USER) || 'null');
+        let userProgress = JSON.parse(localStorage.getItem(STORAGE_PROGRESS) || '{"completedWeek0": false, "week0Booking": null, "unlockedWeek": 1, "completedWeeks": [], "wins": []}');
+        let adminSettings = JSON.parse(localStorage.getItem(STORAGE_ADMIN) || JSON.stringify({ prizeName: "精美小一鉛筆盒套組", probability: 80, passcodes: DEFAULT_PASSCODES }));
+
+        if (!adminSettings.passcodes) adminSettings.passcodes = { ...DEFAULT_PASSCODES };
+
+        let currentQuizWeek = null;
+        let currentQuestionIdx = 0;
+        let pendingScratchWeek = null;
+        let scratchResultIsWin = false;
+        let isScratchCanvasCleared = false;
+        let isAdminLoggedIn = false;
+
+        // Matching Game States
+        let matchingSelectedLeft = null;
+        let matchingSelectedRight = null;
+        let matchingUserConnections = []; // Array of { leftKey, rightKey }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initCountdown();
+            if (currentUser) {
+                showAdventureView();
+            } else {
+                showRegistrationView();
+            }
+        });
+
+        function initCountdown() {
+            function updateTimer() {
+                const now = new Date();
+                const sunday = new Date();
+                sunday.setDate(now.getDate() + (7 - now.getDay()) % 7);
+                sunday.setHours(23, 59, 59, 999);
+                const diff = sunday - now;
+                if (diff <= 0) return;
+
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+                const m = Math.floor((diff / (1000 * 60)) % 60);
+                const s = Math.floor((diff / 1000) % 60);
+
+                const el = document.getElementById('weekly-countdown');
+                if (el) el.innerText = `${String(d).padStart(2, '0')}天 ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
+            updateTimer();
+            setInterval(updateTimer, 1000);
+        }
+
+        function handleRegistration(e) {
+            e.preventDefault();
+            currentUser = {
+                parentName: document.getElementById('reg-parent-name').value.trim(),
+                parentPhone: document.getElementById('reg-parent-phone').value.trim(),
+                childName: document.getElementById('reg-child-name').value.trim(),
+                school: document.getElementById('reg-school').value.trim(),
+                branch: document.getElementById('reg-branch').value
+            };
+            localStorage.setItem(STORAGE_USER, JSON.stringify(currentUser));
+            showAdventureView();
+            if (window.confetti) confetti({ particleCount: 70, spread: 60, origin: { y: 0.6 } });
+        }
+
+        function showRegistrationView() {
+            document.getElementById('registration-view').classList.remove('hidden');
+            document.getElementById('adventure-view').classList.add('hidden');
+            document.getElementById('admin-view').classList.add('hidden');
+            document.getElementById('timer-banner').classList.add('hidden');
+            document.getElementById('user-header-status').classList.add('hidden');
+        }
+
+        function showAdventureView() {
+            document.getElementById('registration-view').classList.add('hidden');
+            document.getElementById('adventure-view').classList.remove('hidden');
+            document.getElementById('admin-view').classList.add('hidden');
+            document.getElementById('timer-banner').classList.remove('hidden');
+            document.getElementById('user-header-status').classList.remove('hidden');
+
+            document.getElementById('user-display-child').innerText = currentUser.childName;
+            document.getElementById('user-display-parent').innerText = currentUser.parentName;
+            document.getElementById('user-display-phone').innerText = currentUser.parentPhone;
+            document.getElementById('user-display-school').innerText = currentUser.school;
+            document.getElementById('user-display-branch').innerText = currentUser.branch;
+
+            document.getElementById('header-completed-count').innerText = userProgress.completedWeeks.length;
+            document.getElementById('completed-progress-num').innerText = `${userProgress.completedWeeks.length} / 21`;
+
+            // Week 0 Status Check
+            const w0Badge = document.getElementById('week0-status-badge');
+            const w0Tag = document.getElementById('week0-tag');
+            const w0Btn = document.getElementById('week0-btn');
+
+            if (userProgress.completedWeek0) {
+                w0Badge.innerText = "已完成驗證刮獎";
+                w0Badge.className = "font-black text-emerald-300 text-xs";
+                w0Tag.innerText = "已通關";
+                w0Tag.className = "bg-emerald-200 text-emerald-900 font-bold text-xs px-3 py-1 rounded-full";
+                w0Btn.innerText = "✓ 已完成分校美語體驗課與驗證";
+                w0Btn.className = "w-full py-2.5 rounded-xl bg-white/20 text-white font-bold text-xs cursor-default";
+            } else if (userProgress.week0Booking) {
+                w0Badge.innerText = "已預約待驗證";
+                w0Badge.className = "font-black text-amber-200 text-xs";
+                w0Tag.innerText = "已預約";
+                w0Tag.className = "bg-amber-200 text-amber-900 font-bold text-xs px-3 py-1 rounded-full";
+                w0Btn.innerText = "前往現場體驗並讓老師輸入驗證碼 ➔";
+                w0Btn.className = "w-full py-2.5 rounded-xl bg-white text-orange-600 font-black text-xs shadow hover:bg-amber-50 transition";
+            } else {
+                w0Badge.innerText = "未預約";
+                w0Badge.className = "font-black text-amber-300 text-xs";
+                w0Tag.innerText = "可預約體驗";
+                w0Tag.className = "bg-white text-orange-600 font-black text-xs px-3 py-1 rounded-full shadow";
+                w0Btn.innerText = "立即查看分校時間地點與預約體驗 ➔";
+                w0Btn.className = "w-full py-2.5 rounded-xl bg-white text-orange-600 font-black text-xs shadow hover:bg-amber-50 transition";
+            }
+
+            renderWeeksGrid();
+            checkGrandPrizeEligibility();
+        }
+
+        // RENDER 21 WEEKS MAP GRID
+        function renderWeeksGrid() {
+            const grid = document.getElementById('weeks-grid');
+            grid.innerHTML = '';
+
+            WEEKS_DATA.forEach(item => {
+                const isCompleted = userProgress.completedWeeks.includes(item.week);
+                const isUnlocked = item.week <= userProgress.unlockedWeek;
+
+                let cardBg = "bg-white border-slate-200";
+                let statusBadge = `<span class="bg-slate-100 text-slate-500 text-[10px] font-bold px-2.5 py-0.5 rounded-full"><i class="fa-solid fa-lock mr-1"></i>尚未解鎖</span>`;
+                let btnHtml = `<button disabled class="w-full py-2 rounded-xl bg-slate-100 text-slate-400 font-bold text-xs">鎖定中</button>`;
+
+                if (isCompleted) {
+                    cardBg = "bg-emerald-50/70 border-emerald-200";
+                    statusBadge = `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-0.5 rounded-full"><i class="fa-solid fa-circle-check mr-1"></i>已通關</span>`;
+                    btnHtml = `<button onclick="startQuiz(${item.week})" class="w-full py-2 rounded-xl bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold text-xs transition">再次複習題目</button>`;
+                } else if (isUnlocked) {
+                    cardBg = "bg-gradient-to-b from-sky-50 to-white border-sky-300 shadow-md";
+                    statusBadge = `<span class="bg-amber-100 text-amber-900 text-[10px] font-bold px-2.5 py-0.5 rounded-full animate-pulse"><i class="fa-solid fa-star mr-1"></i>當週開放中</span>`;
+                    btnHtml = `<button onclick="startQuiz(${item.week})" class="w-full py-2 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:brightness-105 text-white font-bold text-xs shadow transition">開始 5 題冒險挑戰 ➔</button>`;
+                }
+
+                grid.innerHTML += `
+                    <div class="rounded-2xl border p-4 space-y-3 relative ${cardBg} flex flex-col justify-between">
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between">
+                                <span class="font-black text-sky-700 text-xs">第 ${item.week} 週</span>
+                                ${statusBadge}
+                            </div>
+                            <h4 class="font-game font-black text-slate-900 text-sm leading-tight">${item.title}</h4>
+                        </div>
+                        <div class="pt-1">${btnHtml}</div>
+                    </div>
+                `;
+            });
+        }
+
+        // =========================================================
+        // ADMIN BACKEND MANAGEMENT & AUTHENTICATION
+        // =========================================================
+        function toggleAdminView() {
+            const adminSec = document.getElementById('admin-view');
+            
+            // If opening backend and not logged in, ask for credentials
+            if (adminSec.classList.contains('hidden')) {
+                if (!isAdminLoggedIn) {
+                    openAdminLoginModal();
+                    return;
+                }
+                
+                document.getElementById('registration-view').classList.add('hidden');
+                document.getElementById('adventure-view').classList.add('hidden');
+                adminSec.classList.remove('hidden');
+
+                document.getElementById('admin-prize-input').value = adminSettings.prizeName || "精美小一鉛筆盒套組";
+                document.getElementById('admin-prob-select').value = adminSettings.probability || "80";
+
+                renderAdminPasscodeInputs();
+                renderAdminTable();
+            } else {
+                if (currentUser) showAdventureView();
+                else showRegistrationView();
+            }
+        }
+
+        function openAdminLoginModal() {
+            document.getElementById('admin-login-user').value = '';
+            document.getElementById('admin-login-pass').value = '';
+            document.getElementById('admin-login-error').classList.add('hidden');
+            document.getElementById('admin-login-modal').classList.remove('hidden');
+        }
+
+        function closeAdminLoginModal() {
+            document.getElementById('admin-login-modal').classList.add('hidden');
+        }
+
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('admin-login-user').value.trim();
+            const pass = document.getElementById('admin-login-pass').value.trim();
+            const err = document.getElementById('admin-login-error');
+
+            // Default Admin Credentials: user = admin, pass = 2027
+            if ((user === 'admin' && pass === '2027') || (user === 'tn' && pass === '8888')) {
+                isAdminLoggedIn = true;
+                closeAdminLoginModal();
+                toggleAdminView();
+            } else {
+                err.classList.remove('hidden');
+            }
+        }
+
+        function renderAdminPasscodeInputs() {
+            const container = document.getElementById('admin-passcode-grid');
+            container.innerHTML = '';
+
+            const branches = Object.keys(BRANCH_DATA);
+            branches.forEach(b => {
+                const code = (adminSettings.passcodes && adminSettings.passcodes[b]) ? adminSettings.passcodes[b] : "2027";
+                const info = BRANCH_DATA[b];
+                container.innerHTML += `
+                    <div class="p-2.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-black text-slate-800">${b}</span>
+                            <span class="text-[10px] text-slate-400">驗證碼設定</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500">分校驗證碼</label>
+                                <input type="text" id="admin-pass-${b}" value="${code}" class="w-full p-1.5 rounded-lg border border-slate-300 text-xs font-mono font-bold text-slate-800">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-500">體驗時段</label>
+                                <input type="text" id="admin-time-${b}" value="${info.time}" class="w-full p-1.5 rounded-lg border border-slate-300 text-xs font-bold text-slate-800">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function saveAdminSettings() {
+            adminSettings.prizeName = document.getElementById('admin-prize-input').value.trim() || "精美小一鉛筆盒套組";
+            adminSettings.probability = parseInt(document.getElementById('admin-prob-select').value);
+
+            if (!adminSettings.passcodes) adminSettings.passcodes = {};
+
+            const branches = Object.keys(BRANCH_DATA);
+            branches.forEach(b => {
+                const inpPass = document.getElementById(`admin-pass-${b}`);
+                const inpTime = document.getElementById(`admin-time-${b}`);
+                if (inpPass) adminSettings.passcodes[b] = inpPass.value.trim() || "2027";
+                if (inpTime && BRANCH_DATA[b]) {
+                    BRANCH_DATA[b].time = inpTime.value.trim();
+                }
+            });
+
+            localStorage.setItem(STORAGE_ADMIN, JSON.stringify(adminSettings));
+            alert("✅ 後台設定、12 分校專屬驗證碼與體驗課時段已成功更新！");
+        }
+
+        function saveAdminSettings() {
+            adminSettings.prizeName = document.getElementById('admin-prize-input').value.trim() || "精美小一鉛筆盒套組";
+            adminSettings.probability = parseInt(document.getElementById('admin-prob-select').value);
+
+            if (!adminSettings.passcodes) adminSettings.passcodes = {};
+
+            const branches = Object.keys(BRANCH_DATA);
+            branches.forEach(b => {
+                const inp = document.getElementById(`admin-pass-${b}`);
+                if (inp) adminSettings.passcodes[b] = inp.value.trim() || "2027";
+            });
+
+            localStorage.setItem(STORAGE_ADMIN, JSON.stringify(adminSettings));
+            alert("✅ 後台設定與 12 分校驗證碼已更新成功！");
+        }
+
+        function renderAdminTable() {
+            const tbody = document.getElementById('admin-table-body');
+            const search = document.getElementById('admin-search').value.trim().toLowerCase();
+            const branchFilter = document.getElementById('admin-branch-filter').value;
+
+            tbody.innerHTML = '';
+
+            let list = [];
+            if (currentUser) {
+                let w0Status = "未預約";
+                if (userProgress.completedWeek0) w0Status = "已體驗完成刮卡";
+                else if (userProgress.week0Booking) w0Status = `已預約(${userProgress.week0Booking.slot})`;
+
+                list.push({
+                    child: currentUser.childName,
+                    parent: currentUser.parentName,
+                    phone: currentUser.parentPhone,
+                    school: currentUser.school,
+                    branch: currentUser.branch,
+                    week0: w0Status,
+                    progress: `${userProgress.completedWeeks.length} / 21 週`,
+                    wins: userProgress.wins.map(w => `第${w.week}週:${w.prize}`).join(', ') || '無中獎'
+                });
+            }
+
+            const mockData = [
+                { child: "張小明", parent: "張媽媽", phone: "0912-345-678", school: "勝利國小", branch: "崇學分校", week0: "已預約(每週六 10:00-11:00)", progress: "4 / 21 週", wins: "無中獎" },
+                { child: "李小華", parent: "李爸爸", phone: "0922-111-333", school: "億載國小", branch: "安平區艾蒙利校", week0: "已體驗完成刮卡", progress: "12 / 21 週", wins: "第2週:鉛筆盒套組" },
+                { child: "陳大熊", parent: "陳媽媽", phone: "0955-666-888", school: "崇明國小", branch: "凱仕蘭分校", week0: "未預約", progress: "1 / 21 週", wins: "無中獎" }
+            ];
+
+            list = list.concat(mockData);
+
+            list.forEach(item => {
+                if (branchFilter !== 'ALL' && item.branch !== branchFilter) return;
+                if (search && !item.parent.toLowerCase().includes(search) && !item.phone.includes(search)) return;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 border-b border-slate-100 font-medium";
+                tr.innerHTML = `
+                    <td class="p-3"><span class="font-bold text-slate-800">${item.child}</span><br><span class="text-[10px] text-slate-400">家長:${item.parent}</span></td>
+                    <td class="p-3 font-mono">${item.phone}</td>
+                    <td class="p-3">${item.school}<br><span class="text-[10px] text-sky-600 font-bold">${item.branch}</span></td>
+                    <td class="p-3 font-bold ${item.week0.includes('已')?'text-emerald-600':'text-slate-400'}">${item.week0}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 font-bold text-[10px]">${item.progress}</span></td>
+                    <td class="p-3 text-slate-700">${item.wins}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function adminUnlockNextWeek() {
+            if (userProgress.unlockedWeek < 21) {
+                userProgress.unlockedWeek += 1;
+                localStorage.setItem(STORAGE_PROGRESS, JSON.stringify(userProgress));
+                alert(`⚡ 快進成功：已解鎖至第 ${userProgress.unlockedWeek} 週！`);
+                showAdventureView();
+                renderAdminTable();
+            } else {
+                alert("已全部解鎖！");
+            }
+        }
+
+        function adminUnlockAllWeeks() {
+            userProgress.completedWeek0 = true;
+            userProgress.unlockedWeek = 21;
+            userProgress.completedWeeks = Array.from({length: 21}, (_, i) => i + 1);
+            localStorage.setItem(STORAGE_PROGRESS, JSON.stringify(userProgress));
+            alert("🚀 快進成功：全 21 週及美語體驗課已全部完成標記！");
+            showAdventureView();
+            renderAdminTable();
+        }
+
+        function adminResetData() {
+            if (confirm("確定要重置所有測試資料嗎？")) {
+                localStorage.removeItem(STORAGE_USER);
+                localStorage.removeItem(STORAGE_PROGRESS);
+                localStorage.removeItem(STORAGE_ADMIN);
+                location.reload();
+            }
+        }
+
+        function exportToCSV() {
+            let csv = "\uFEFF學生姓名,家長姓名,電話,目標國小,分校,美語體驗課,21週進度,刮刮卡中獎記錄\n";
+            csv += `"${currentUser?currentUser.childName:'無'}","${currentUser?currentUser.parentName:'無'}","${currentUser?currentUser.parentPhone:'無'}","${currentUser?currentUser.school:'無'}","${currentUser?currentUser.branch:'無'}","${userProgress.completedWeek0?'已完成':'未完成'}","${userProgress.completedWeeks.length}/21週","${userProgress.wins.length>0?userProgress.wins.map(w=>w.prize).join(';'):'無'}"\n`;
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute("download", `台南小一新手村_名單匯出_${new Date().toLocaleDateString()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
